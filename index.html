@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAYYAN_OS v4.2.1</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#04080A;--ph:#2AFF80;--ph-dim:#0E7A3C;--amber:#FFB000;--red:#FF4B4B;--cyan:#4BE8FF;--mono:'JetBrains Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ph);font-family:var(--mono);font-size:14px;overflow:hidden}
+::selection{background:var(--ph);color:#000}
+
+/* CRT effects */
+.crt{position:fixed;inset:0;pointer-events:none;z-index:9999}
+.crt::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px)}
+.crt::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55) 100%)}
+.flicker{position:fixed;inset:0;pointer-events:none;background:rgba(42,255,128,.018);z-index:9998;animation:flick 4s infinite}
+@keyframes flick{0%,94%,100%{opacity:1}95%{opacity:.55}96%{opacity:1}97%{opacity:.7}}
+
+/* boot screen */
+#boot{position:fixed;inset:0;background:var(--bg);z-index:500;padding:5vh 5vw;overflow:hidden}
+#boot pre{white-space:pre-wrap;text-shadow:0 0 6px rgba(42,255,128,.6);line-height:1.7;font-size:13px}
+#boot .ok{color:var(--ph)} #boot .warn{color:var(--amber)} #boot .info{color:var(--ph-dim)}
+.skip{position:fixed;bottom:20px;right:24px;color:var(--ph-dim);font-size:11px;letter-spacing:.2em;cursor:pointer;border:1px solid var(--ph-dim);padding:8px 14px;background:none;font-family:var(--mono)}
+.skip:hover{color:var(--ph);border-color:var(--ph)}
+
+/* desktop */
+#desktop{position:fixed;inset:0;display:none;padding:44px 18px 60px}
+.topbar{position:fixed;top:0;left:0;right:0;height:34px;background:rgba(4,8,10,.95);border-bottom:1px solid var(--ph-dim);
+  display:flex;align-items:center;padding:0 16px;gap:20px;font-size:11.5px;z-index:400;text-shadow:0 0 6px rgba(42,255,128,.5)}
+.topbar .t{margin-left:auto;color:var(--ph-dim)}
+.topbar b{color:var(--amber)}
+.topbar .m{cursor:pointer;color:var(--ph-dim)} .topbar .m:hover{color:var(--ph)}
+
+/* windows */
+.win{position:absolute;background:rgba(4,10,8,.96);border:1px solid var(--ph);box-shadow:0 0 30px rgba(42,255,128,.12), inset 0 0 60px rgba(42,255,128,.03);
+  min-width:300px;display:flex;flex-direction:column;z-index:10}
+.win.active{z-index:100;box-shadow:0 0 40px rgba(42,255,128,.25)}
+.win-head{background:var(--ph);color:#04220E;padding:6px 12px;font-weight:800;font-size:12px;letter-spacing:.1em;
+  display:flex;justify-content:space-between;cursor:grab;user-select:none;text-transform:uppercase}
+.win-head:active{cursor:grabbing}
+.win-head .x{cursor:pointer;padding:0 6px}
+.win-body{padding:16px 18px;overflow-y:auto;flex:1;line-height:1.75;font-size:13px;text-shadow:0 0 5px rgba(42,255,128,.4)}
+.win-body::-webkit-scrollbar{width:8px}
+.win-body::-webkit-scrollbar-thumb{background:var(--ph-dim)}
+.win-body h3{color:var(--amber);font-size:13px;margin:14px 0 4px;text-transform:uppercase;letter-spacing:.1em}
+.win-body h3:first-child{margin-top:0}
+.win-body .dim{color:var(--ph-dim)}
+.win-body .cy{color:var(--cyan)}
+.win-body a{color:var(--cyan)}
+.win-body table{border-collapse:collapse;width:100%;margin:8px 0}
+.win-body td{border:1px solid var(--ph-dim);padding:5px 10px;font-size:12px}
+.bar-row{display:flex;align-items:center;gap:10px;margin:3px 0}
+.bar-row .lb{width:190px;flex-shrink:0;font-size:12px}
+.bar-row .br{color:var(--ph)}
+
+/* terminal */
+#term-out{white-space:pre-wrap;word-break:break-word}
+#term-out .cmd-echo{color:var(--amber)}
+#term-out .err{color:var(--red)}
+.prompt-line{display:flex;gap:8px;margin-top:4px}
+.prompt-line .ps1{color:var(--amber);white-space:nowrap}
+#term-in{background:none;border:none;outline:none;color:var(--ph);font-family:var(--mono);font-size:13px;flex:1;text-shadow:0 0 5px rgba(42,255,128,.4)}
+.cursor{display:inline-block;width:8px;height:14px;background:var(--ph);animation:blink 1s steps(1) infinite;vertical-align:-2px}
+@keyframes blink{50%{opacity:0}}
+
+/* architecture diagram */
+.arch-svg{width:100%;height:auto;display:block;margin:4px 0 10px}
+.a-box{fill:rgba(42,255,128,.04);stroke:var(--ph);stroke-width:1.2}
+.a-amb{fill:rgba(255,176,0,.05);stroke:var(--amber);stroke-width:1.2}
+.a-dyn{fill:rgba(75,232,255,.05);stroke:var(--cyan);stroke-width:1.2}
+.a-out{fill:rgba(42,255,128,.1);stroke:var(--ph);stroke-width:1.6}
+.a-t{fill:var(--ph);font:700 11px var(--mono)}
+.a-ta{fill:var(--amber);font:700 11px var(--mono)}
+.a-tc{fill:var(--cyan);font:700 11px var(--mono)}
+.a-s{fill:var(--ph-dim);font:400 9.5px var(--mono)}
+.a-sc{fill:var(--cyan);font:400 9.5px var(--mono);opacity:.85}
+.a-ln{fill:none;stroke:var(--ph);stroke-width:1.2}
+.a-lc{fill:none;stroke:var(--cyan);stroke-width:1.2}
+.a-flow{stroke-dasharray:5 5;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-10}}
+.a-n{fill:#04220E;font:800 9px var(--mono)}
+.a-nb{fill:var(--amber)}
+.seq{margin-top:4px}
+.seq div{margin:2px 0}
+.seq b{color:var(--amber)}
+
+/* dock */
+.dock{position:fixed;bottom:0;left:0;right:0;height:46px;background:rgba(4,8,10,.95);border-top:1px solid var(--ph-dim);
+  display:flex;align-items:center;gap:8px;padding:0 14px;z-index:400;overflow-x:auto}
+.dock button{background:none;border:1px solid var(--ph-dim);color:var(--ph-dim);font-family:var(--mono);font-size:11px;
+  padding:7px 14px;cursor:pointer;letter-spacing:.1em;white-space:nowrap;text-transform:uppercase}
+.dock button:hover,.dock button.open{color:var(--ph);border-color:var(--ph);text-shadow:0 0 6px rgba(42,255,128,.6)}
+
+@media(max-width:760px){
+  .win{position:fixed!important;inset:44px 8px 56px 8px!important;width:auto!important;height:auto!important}
+  body{font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="crt"></div><div class="flicker"></div>
+
+<div id="boot"><pre id="boot-text"></pre><button class="skip" id="skip">PRESS [ENTER] TO SKIP ▸</button></div>
+
+<div class="topbar" id="topbar" style="display:none">
+  <span><b>HAYYAN_OS</b> v4.2.1</span>
+  <span class="m" data-app="terminal">TERMINAL</span>
+  <span class="m" data-app="projects">PROJECTS</span>
+  <span class="m" data-app="arch">ARCH</span>
+  <span class="m" data-app="skills">SKILLS</span>
+  <span class="m" data-app="contact">CONTACT</span>
+  <span class="t" id="clock">--:--:--</span>
+</div>
+
+<div id="desktop"></div>
+
+<div class="dock" id="dock" style="display:none">
+  <button data-app="terminal">▸ terminal</button>
+  <button data-app="about">▸ about.txt</button>
+  <button data-app="projects">▸ /projects</button>
+  <button data-app="arch">▸ atlas.arch</button>
+  <button data-app="skills">▸ skills.sys</button>
+  <button data-app="xp">▸ career.log</button>
+  <button data-app="contact">▸ contact.sh</button>
+</div>
+
+<script>
+/* ============ BOOT SEQUENCE ============ */
+const bootLines=[
+ ["info","HAYYAN BIOS v4.2.1 — (C) 2026 Muhammad Hayyan"],
+ ["info","CPU: Human Brain @ 4.2 GHz (curiosity-cooled)"],
+ ["ok","Memory check .................... large financial datasets OK"],
+ ["ok","Mounting /dev/spring_boot ....... OK"],
+ ["ok","Mounting /dev/aws_lambda ........ OK  [concurrency-safe]"],
+ ["ok","Loading JDK 25 (17 compat) ..... OK"],
+ ["ok","Starting redis_cache.service ... OK  [hot path warmed]"],
+ ["ok","Starting dynamodb_locks.service  OK  [0 dirty reads]"],
+ ["warn","WARN: sleep.service not found — skipping"],
+ ["ok","Docker Compose stack ........... OK  [business-central + kie-server]"],
+ ["ok","Terraform state ................ OK  [no drift]"],
+ ["info",""],
+ ["ok","Welcome, visitor. Identity: RECRUITER|CLIENT|CURIOUS"],
+ ["info","Launching HAYYAN_OS desktop environment..."],
+];
+const bt=document.getElementById('boot-text');
+let li=0,done=false;
+function bootStep(){
+  if(done)return;
+  if(li>=bootLines.length){finishBoot();return}
+  const [cls,txt]=bootLines[li++];
+  bt.innerHTML+=`<span class="${cls}">${txt}</span>\n`;
+  setTimeout(bootStep, 90+Math.random()*160);
+}
+function finishBoot(){
+  if(done)return;done=true;
+  document.getElementById('boot').style.display='none';
+  document.getElementById('topbar').style.display='flex';
+  document.getElementById('dock').style.display='flex';
+  document.getElementById('desktop').style.display='block';
+  openApp('terminal');openApp('about');
+}
+document.getElementById('skip').onclick=finishBoot;
+addEventListener('keydown',e=>{if(e.key==='Enter'&&!done)finishBoot()});
+bootStep();
+
+/* clock */
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB')+' PKT'},1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB')+' PKT';
+
+/* ============ WINDOW MANAGER ============ */
+const desktop=document.getElementById('desktop');
+let zTop=100, openWins={};
+function mkWin(id,title,html,x,y,w,h){
+  if(openWins[id]){focusWin(openWins[id]);return}
+  const el=document.createElement('div');
+  el.className='win';el.style.left=Math.min(x,innerWidth-320)+'px';el.style.top=y+'px';
+  el.style.width=w+'px';el.style.height=h+'px';
+  el.innerHTML=`<div class="win-head"><span>▓ ${title}</span><span class="x" title="close">[X]</span></div><div class="win-body">${html}</div>`;
+  desktop.appendChild(el);openWins[id]=el;
+  el.querySelector('.x').onclick=()=>{el.remove();delete openWins[id];syncDock()};
+  el.addEventListener('mousedown',()=>focusWin(el));
+  // drag
+  const head=el.querySelector('.win-head');
+  head.addEventListener('pointerdown',e=>{
+    if(e.target.classList.contains('x'))return;
+    focusWin(el);
+    const sx=e.clientX-el.offsetLeft, sy=e.clientY-el.offsetTop;
+    const mv=ev=>{el.style.left=Math.max(0,ev.clientX-sx)+'px';el.style.top=Math.max(34,ev.clientY-sy)+'px'};
+    const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};
+    addEventListener('pointermove',mv);addEventListener('pointerup',up);
+  });
+  focusWin(el);syncDock();
+  return el;
+}
+function focusWin(el){document.querySelectorAll('.win').forEach(w=>w.classList.remove('active'));el.classList.add('active');el.style.zIndex=++zTop}
+function syncDock(){document.querySelectorAll('.dock button').forEach(b=>b.classList.toggle('open',!!openWins[b.dataset.app]))}
+
+/* ============ APP CONTENT ============ */
+const P=[
+ ["etf-index-platform","ETF & Index Management Platform","Java + Spring Boot backend for ETF and index data management, calculation and user management across large financial datasets. Faster via Redis caching, DB indexing and query optimization. (CodeGraphers · client: Ultumus)","Java, Spring Boot, Redis, SQL"],
+ ["core-migration","CORE Migration (Java 11 → 25)","Solo migration of a business-critical legacy platform to Java 25 while keeping Java 17 compatibility for shared services used by other products. Fixed compat issues, improved performance, preserved behavior.","Java 25, Java 17, Spring Boot"],
+ ["atlas-file-gen","Atlas File Generation","AWS file-generation architecture taken from PoC to production. Coordinated Lambdas beat execution limits for high-throughput concurrent loads; DynamoDB state + locking prevents dirty reads and conflicting updates. (run: arch)","AWS Lambda, DynamoDB"],
+ ["jbpm-modernization","jBPM Platform Modernization","Split a monolithic WildFly-based jBPM platform into independent Business Central and KIE Server services. Stable PostgreSQL + Keycloak SSO integration, dynamic config, end-to-end validation.","Docker, Compose, WildFly, Keycloak"],
+ ["job-matching","Global Job-Matching Platform","Full-stack work at BroCode: Spring Boot services + React features, CI/CD and infra automation, Datadog observability, Cypress test automation.","Spring Boot, React, Terraform, Cypress"],
+];
+const apps={
+ about:{t:"about.txt",w:460,h:330,html:`
+<h3>$ whoami</h3>
+Muhammad Hayyan
+<br>Backend-focused Software Engineer
+<h3>$ cat mission.txt</h3>
+I enjoy solving complex engineering problems and building reliable
+systems that don't break under pressure. I'd rather understand how
+things work than simply make them work.
+<h3>$ current</h3>
+Software Engineer @ <span class="cy">CodeGraphers</span>
+<br><span class="dim">Client engagement: Ultumus — ETF &amp; index platform, CORE migration, Atlas file generation.</span>`},
+ projects:{t:"/projects — ls -la",w:640,h:460,html:
+   `<span class="dim">total ${P.length} · drwxr-xr-x · hayyan prod</span><br><br>`+
+   P.map(p=>`<h3>▸ ${p[0]}/</h3>${p[2]}<br><span class="dim">stack: ${p[3]}</span><br>`).join('<br>')},
+ skills:{t:"skills.sys — resource monitor",w:520,h:400,html:
+   [["Java · Spring Boot",92],["AWS Lambda / Serverless",85],["Docker & Compose",88],
+    ["PostgreSQL · DynamoDB · Redis",86],["Terraform · GitLab CI/CD",80],["SQL",85],
+    ["React / JavaScript",75],["C++ / Assembly",72]]
+   .map(s=>{const f=Math.round(s[1]/4);return `<div class="bar-row"><span class="lb">${s[0]}</span><span class="br">[${'█'.repeat(f)}${'░'.repeat(25-f)}] ${s[1]}%</span></div>`}).join('')+
+   `<br><span class="dim">8 processes running · 0 zombies · uptime since 2020</span>`},
+ xp:{t:"career.log — tail -f",w:560,h:380,html:`
+<h3>[Dec 2025 → Aug 2026] codegraphers · client: ultumus</h3>ETF &amp; Index Management Platform — Java/Spring Boot services, Redis caching, query optimization.
+<h3>[Feb 2026 → Jun 2026] codegraphers · client: ultumus</h3>CORE migration (Java 11 → 25) and Atlas file generation on AWS Lambda + DynamoDB.
+<h3>[codegraphers]</h3>jBPM platform modernization &amp; containerization (WildFly → Business Central + KIE Server).
+<h3>[Sep 2024 → Jan 2025] brocode</h3>Associate Software Engineer. Full-stack on a global job-matching platform: Java/Spring Boot, React, GitLab CI/CD, Terraform, Datadog, Cypress.
+<h3>[Aug 2020 → Jun 2024] FAST NUCES</h3>Bachelor's in Computer Science.
+<br><span class="dim">— log continues... watching for next entry —</span>`},
+ contact:{t:"contact.sh",w:460,h:280,html:`
+<h3>#!/bin/bash — open_channel</h3>
+PHONE   = +92 332 6894457<br>
+EMAIL   = <a href="mailto:m.hayyan32@gmail.com">m.hayyan32@gmail.com</a><br>
+LINKEDIN= <a href="https://linkedin.com/in/muhammad-hayyan-ace" target="_blank" rel="noopener">linkedin.com/in/muhammad-hayyan-ace</a><br><br>
+<span class="dim"># Response time: &lt; 24h. Faster if the problem is interesting.</span><br>
+<span class="cy">▸ exit code 0 — channel open</span>`},
+};
+apps.arch={t:"atlas.arch — file-generation pipeline",w:700,h:620,html:`
+<h3>$ render atlas --view=architecture</h3>
+<svg class="arch-svg" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atlas file generation architecture: a coordinator Lambda fans out work to worker Lambdas, which coordinate through DynamoDB state and locks, then assemble the client file.">
+  <defs>
+    <marker id="ah-g" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" fill="#2AFF80"/></marker>
+    <marker id="ah-c" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" fill="#4BE8FF"/></marker>
+  </defs>
+
+  <!-- connections: main flow (green) -->
+  <path class="a-ln a-flow" d="M170 42 H245" marker-end="url(#ah-g)"/>
+  <path class="a-ln a-flow" d="M330 64 V100 H90 V140" marker-end="url(#ah-g)"/>
+  <path class="a-ln a-flow" d="M330 64 V140" marker-end="url(#ah-g)"/>
+  <path class="a-ln a-flow" d="M330 100 H370 V140" marker-end="url(#ah-g)"/>
+  <path class="a-ln a-flow" d="M110 194 V268 H255 V324" marker-end="url(#ah-g)"/>
+  <path class="a-ln a-flow" d="M250 194 V268 H255"/>
+  <path class="a-ln a-flow" d="M390 194 V268 H255"/>
+
+  <!-- connections: state + locks (cyan) -->
+  <path class="a-lc a-flow" d="M415 42 H545 V104" marker-end="url(#ah-c)"/>
+  <path class="a-lc a-flow" d="M70 194 V232 H545 V270" marker-end="url(#ah-c)"/>
+  <path class="a-lc a-flow" d="M210 194 V232"/>
+  <path class="a-lc a-flow" d="M350 194 V232"/>
+
+  <!-- nodes -->
+  <rect class="a-box" x="20" y="20" width="150" height="44"/>
+  <text class="a-t" x="95" y="39" text-anchor="middle">CLIENT REQUEST</text>
+  <text class="a-s" x="95" y="53" text-anchor="middle">file generation job</text>
+
+  <rect class="a-amb" x="245" y="20" width="170" height="44"/>
+  <text class="a-ta" x="330" y="39" text-anchor="middle">COORDINATOR λ</text>
+  <text class="a-s" x="330" y="53" text-anchor="middle">splits work · tracks progress</text>
+
+  <rect class="a-box" x="30" y="140" width="120" height="54"/>
+  <text class="a-t" x="90" y="163" text-anchor="middle">WORKER λ #1</text>
+  <text class="a-s" x="90" y="178" text-anchor="middle">process chunk</text>
+
+  <rect class="a-box" x="170" y="140" width="120" height="54"/>
+  <text class="a-t" x="230" y="163" text-anchor="middle">WORKER λ #2</text>
+  <text class="a-s" x="230" y="178" text-anchor="middle">process chunk</text>
+
+  <rect class="a-box" x="310" y="140" width="120" height="54"/>
+  <text class="a-t" x="370" y="163" text-anchor="middle">WORKER λ #N</text>
+  <text class="a-s" x="370" y="178" text-anchor="middle">concurrent × N</text>
+
+  <rect class="a-dyn" x="470" y="104" width="150" height="166"/>
+  <text class="a-tc" x="545" y="126" text-anchor="middle">DYNAMODB</text>
+  <text class="a-sc" x="545" y="150" text-anchor="middle">job state</text>
+  <text class="a-sc" x="545" y="166" text-anchor="middle">lock items</text>
+  <text class="a-sc" x="545" y="182" text-anchor="middle">progress tracking</text>
+  <text class="a-s" x="545" y="212" text-anchor="middle">no dirty reads</text>
+  <text class="a-s" x="545" y="226" text-anchor="middle">no conflicting writes</text>
+
+  <rect class="a-out" x="170" y="324" width="170" height="46"/>
+  <text class="a-t" x="255" y="344" text-anchor="middle">CLIENT FILE</text>
+  <text class="a-s" x="255" y="358" text-anchor="middle">assembled · delivered</text>
+
+  <!-- step markers -->
+  <circle class="a-nb" cx="207" cy="42" r="8"/><text class="a-n" x="207" y="45" text-anchor="middle">1</text>
+  <circle class="a-nb" cx="330" cy="120" r="8"/><text class="a-n" x="330" y="123" text-anchor="middle">2</text>
+  <circle class="a-nb" cx="480" cy="232" r="8"/><text class="a-n" x="480" y="235" text-anchor="middle">3</text>
+  <circle class="a-nb" cx="255" cy="296" r="8"/><text class="a-n" x="255" y="299" text-anchor="middle">4</text>
+</svg>
+<h3>$ cat flow.log</h3>
+<div class="seq">
+<div><b>[1]</b> request arrives → coordinator λ takes the job</div>
+<div><b>[2]</b> work is split across worker λs, so no single run hits the execution limit</div>
+<div><b>[3]</b> workers claim and update state in <span class="cy">DynamoDB</span> using lock items → concurrent runs can't step on each other</div>
+<div><b>[4]</b> finished chunks are assembled into the client's file</div>
+</div>
+<br><span class="dim"># took it from proof of concept to production · high-throughput, concurrent workloads</span>`};
+
+let spawn=0;
+function openApp(id){
+  if(id==='terminal'){mkTerminal();return}
+  const a=apps[id];if(!a)return;
+  spawn++;
+  mkWin(id,a.t,a.html, 90+spawn*34, 70+spawn*26, a.w, a.h);
+}
+document.querySelectorAll('[data-app]').forEach(b=>b.addEventListener('click',()=>openApp(b.dataset.app)));
+
+/* ============ TERMINAL APP ============ */
+function mkTerminal(){
+  if(openWins['terminal']){focusWin(openWins['terminal']);return}
+  const el=mkWin('terminal','terminal — hayyan@prod',`
+   <div id="term-out">HAYYAN_OS shell — type <span class="cy">help</span> for commands\n</div>
+   <div class="prompt-line"><span class="ps1">hayyan@prod:~$</span><input id="term-in" autocomplete="off" spellcheck="false"></div>`,
+   Math.max(20,innerWidth-720), 90, 640, 420);
+  const out=el.querySelector('#term-out'), inp=el.querySelector('#term-in'), body=el.querySelector('.win-body');
+  el.addEventListener('mousedown',()=>setTimeout(()=>inp.focus(),0));
+  setTimeout(()=>inp.focus(),50);
+  const cmds={
+    help:()=>`commands:\n  whoami      — who is this guy\n  projects    — list shipped systems\n  arch        — Atlas architecture diagram\n  skills      — resource monitor\n  contact     — open comms\n  stack       — tech stack dump\n  sudo hire   — do it\n  clear       — wipe screen\n  windows: about | projects | skills | xp | contact`,
+    whoami:()=>`Muhammad Hayyan — Backend-focused Software Engineer.\nBuilds reliable Java/Spring Boot systems, AWS serverless pipelines and containerized platforms. Currently @ CodeGraphers.`,
+    projects:()=>P.map((p,i)=>`[${i+1}] ${p[1]}\n    ${p[2]}`).join('\n'),
+    skills:()=>{openApp('skills');return 'launching skills.sys...'},
+    contact:()=>{openApp('contact');return 'opening channel...'},
+    stack:()=>`java · spring boot · c++ · assembly · javascript · react · sql\naws lambda · docker · docker compose · gitlab ci/cd · terraform\npostgresql · dynamodb · redis · firebase · keycloak · datadog · cypress`,
+    arch:()=>{openApp('arch');return 'rendering atlas.arch...'},
+    clear:()=>{out.textContent='';return null},
+    'sudo hire':()=>`[sudo] password for visitor: ********\nACCESS GRANTED.\n→ email m.hayyan32@gmail.com with subject "let's build"\n→ attach: interesting problem\n→ receive: reliable system`,
+    ls:()=>`about.txt  projects/  atlas.arch  skills.sys  career.log  contact.sh  secrets/ [permission denied]`,
+    pwd:()=>`/home/hayyan/portfolio`,
+    exit:()=>`nice try. there is no escape from good engineering.`,
+  };
+  inp.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    const c=inp.value.trim();inp.value='';
+    out.innerHTML+=`<span class="cmd-echo">hayyan@prod:~$ ${c.replace(/</g,'&lt;')}</span>\n`;
+    if(c){
+      const fn=cmds[c.toLowerCase()];
+      if(fn){const r=fn();if(r!==null)out.innerHTML+=r.replace(/</g,'&lt;').replace(/&lt;span/g,'<span')+'\n';}
+      else out.innerHTML+=`<span class="err">command not found: ${c.replace(/</g,'&lt;')}</span> — try 'help'\n`;
+    }
+    body.scrollTop=body.scrollHeight;
+  });
+}
+</script>
+</body>
+</html>
